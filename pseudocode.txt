@@ -1,0 +1,221 @@
+RECORD USER
+	DECLARE loginId AS STRING
+	DECLARE password AS STRING
+	DECLARE role AS STRING
+END RECORD
+
+RECORD PROGRAMSOFFERED
+	DECLARE programName, description, applicantEligibility, degreeCertificateOffered AS STRING
+	DECLARE duration AS INTEGER
+END RECORD
+	
+RECORD Applicant
+	DECLARE applicationId, marksObtained AS INTEGER
+	DECLARE fullName, highestQualification, goals, emailId AS STRING
+	DECLARE status AS STRING AND STORE AS Applied
+	DECLARE dateOfBirth, dateOfInterview AS DATE
+END RECORD
+
+BEGIN
+	PROMPT "Enter your role"
+	PROMPT "1.Admin"
+	PROMPT "2.Member of Admission Committee"
+	PROMPT "3.Applicant"
+	ACCEPT USER.role
+	
+	CASE BASED ON USER.role: 
+		CASE Admin:
+			PROMPT "Enter Login ID: " AND STORE IN USER.loginId
+			PROMPT "Enter Password: " AND STORE IN USER.password
+			IF(isNotValid(user)) THEN
+				PRINT "Enter valid credentials"
+			ELSE
+				loginAsAdmin()    //parameter?
+			END IF
+		CASE Member of Admission Committee:
+			PROMPT "Enter Login ID: " AND STORE IN USER.loginId
+			PROMPT "Enter Password: " AND STORE IN USER.password
+			IF(isNotValid(user)) THEN
+				PRINT "Enter valid credentials"
+			ELSE
+				loginAsMAC()    //parameter?
+			END IF
+		CASE Applicant:
+			loginAsApplicant()
+	END CASE
+END
+
+SUB isNotValid(USER user)
+	IF(isAuthenticated(user)) THEN
+		RETURN true
+	ELSE
+		RETURN false
+	END IF
+END SUB
+
+SUB loginAsAdmin()
+	DECLARE choice AS INTEGER AND STORE 0
+	PROMPT "Enter choice"
+	PROMPT "1. Programs Offered"
+	PROMPT "2. Programs Scheduled"
+	PROMPT "3. View Reports"
+	ACCEPT choice
+	CASE BASED ON choice
+		CASE 1:
+			programsOffered()
+		CASE 2:
+			programsSchedule()
+		CASE 3:
+			viewReports()
+	END CASE	
+END SUB
+
+SUB programsOffered()
+	DECLARE choice AS INTEGER AND STORE 0
+	PROMPT "Enter choice"
+	PROMPT "1. Add"
+	PROMPT "2. Delete"
+	ACCEPT choice
+	CASE BASED ON choice
+		CASE 1:
+			addProgramOffered()
+			EXCEPTION
+				WHEN DuplicateRecordFound THEN
+					PRINT errormessage //Errormessage returned from exception
+		CASE 2:
+			deleteProgramOffered()
+	END CASE
+END SUB
+
+SUB addProgramOffered()
+	PROMPT "Enter Program Name: "
+	ACCEPT PROGRAMSOFFERED.programName
+	PROMPT "Enter Program Description: "
+	ACCEPT PROGRAMSOFFERED.description
+	PROMPT "Enter Applicant Eligibility: "
+	ACCEPT PROGRAMSOFFERED.applicantEligibility
+	PROMPT "Enter Degree Certificate Offered: "
+	ACCEPT PROGRAMSOFFERED.degreeCertificateOffered
+	PROMPT "Enter Duration of Program in months: "
+	ACCEPT PROGRAMSOFFERED.duration
+	IF(insertNewProgramOffered(PROGRAMSOFFERED)) THEN
+		PRINT "Program Added Successfully"
+	ELSE
+		RAISE DuplicateRecordFound("This Program already exists")
+	END IF
+END SUB
+
+SUB deleteProgramOffered()											// function name?
+	PROMPT "Enter Program Name: "
+	ACCEPT PROGRAMSOFFERED.programName
+	IF(deleteProgramOffered(PROGRAMSOFFERED.programName)) THEN
+		PRINT "Program Deleted Successfully"
+	ELSE
+		PRINT "No such program found"
+	END IF
+END SUB
+
+SUB programsSchedule()
+	DECLARE choice AS INTEGER AND STORE 0
+	PROMPT "Enter choice"
+	PROMPT "1. Add"
+	PROMPT "2. Delete"
+	ACCEPT choice
+	CASE BASED ON choice
+		CASE 1:
+			addProgramsSchedule()
+		CASE 2:
+			deleteProgramsSchedule()
+	END CASE
+END SUB
+
+SUB viewReports()
+	DECLARE choice AS INTEGER AND STORE 0
+	PROMPT "Enter choice"
+	PROMPT "1. View Applicants"
+	PROMPT "2. View Programs"
+	ACCEPT choice
+	CASE BASED ON choice
+		CASE 1:
+			IF(viewApplicants()==false) THEN
+				PRINT "No Record Found"
+		CASE 2:
+			IF(viewPrograms()==false) THEN
+				PRINT "No Record Found"
+	END CASE
+END SUB
+
+SUB loginAsMAC()
+	DECLARE choice AS INTEGER AND STORE 0
+	PROMPT "Enter choice"
+	PROMPT "1. View Applicant"
+	PROMPT "2. Accept/Reject Application"
+	PROMPT "3. Update Status"
+	ACCEPT choice
+	CASE BASED ON choice
+		CASE 1:
+			IF(viewApplicants()==false) THEN
+				PRINT "No Record Found"
+		CASE 2:
+			updateApplicationStatus()
+		CASE 3:
+			updateApplicationStatus()
+	END CASE
+END SUB
+
+SUB loginAsApplicant()
+	DECLARE response AS INTEGER AND STORE 0
+	DECLARE id AS INTEGER AND STORE 0
+	PROMPT "Select option"
+	PROMPT "1. View Applied Program Status"
+	PROMPT "2. View Programs"
+	ACCEPT response
+	CASE BASED ON response
+		CASE 1:
+			PROMPT "Enter your Application Id"
+			ACCEPT id
+			IF(viewAppliedProgramStatus(id)==false) THEN
+				PRINT "Not yet registered"
+		CASE 2:
+			viewPrograms()
+	END CASE
+END SUB
+
+SUB viewPrograms()
+	DECLARE programChoice AS STRING
+	IF(!getOfferedPrograms())
+		PRINT "No Record Found"
+	ELSE
+		PROMPT "Enter Program name to which you want to apply"
+		ACCEPT programChoice
+		IF(applyForProgram(programChoice)!=-1)
+			PRINT "Enrollment Successfull !"
+END SUB
+
+SUB applyForProgram(programChoice)
+	PROMPT "Enter Name"
+	ACCEPT Applicant.fullName
+	PROMPT "Enter Date of Birth"
+	ACCEPT Applicant.dateOfBirth
+	PROMPT "Enter your Highest Qualification"
+	ACCEPT Applicant.highestQualification
+	PROMPT "Enter Marks Obtained"
+	ACCEPT Applicant.marksObtained
+	PROMPT "Enter your primary email-id"
+	ACCEPT Applicant.emailId
+	PROMPT "Enter goals"
+	ACCEPT Applicant.goals
+	IF(isValid(Applicant))
+		insertNewApplicantRecord(Applicant)
+		Applicant.applicationId = getApplicationId(Applicant)
+	ELSE
+		PRINT "Please enter valid details"
+END SUB
+
+SUB isValid(Applicant)
+	IF(isCharacterString(Applicant.fullName))
+		IF(isDigits(Applicant.marksObtained))
+			IF(isValidMail(Applicant.emailId))
+				RETURN true
+	RETURN false
+END SUB
